@@ -1,0 +1,59 @@
+# `@narenana/blackbox-parser` — WASM wrapper around the `blackbox-log` Rust
+# crate (https://github.com/blackbox-log/blackbox-log). Compiled to wasm32 via
+# `wasm-pack build --target web` and published to npm as a drop-in parser for
+# Betaflight / iNAV / Cleanflight blackbox binary logs (.bbl, .bfl, .txt).
+#
+# Build:   wasm-pack build --target web --release
+# Output:  pkg/   (npm-installable package, gitignored)
+# Dev:     cd pkg && npm link  ←→  cd <consumer> && npm link @narenana/blackbox-parser
+
+[package]
+name = "blackbox-parser"
+version = "0.1.0"
+edition = "2021"
+authors = ["narenana"]
+license = "MIT OR Apache-2.0"
+description = "Browser-native parser for Betaflight / iNAV / Cleanflight blackbox logs (WASM)"
+repository = "https://github.com/narenana/blackbox-parser"
+readme = "README.md"
+
+# cdylib is required for wasm-pack to produce a usable .wasm + bindings.
+# rlib is kept so we can also write Rust integration tests.
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# The actual blackbox parser. MIT/Apache-2.0, MSRV 1.87. We're shipping a thin
+# WASM facade around its public API.
+blackbox-log = "0.4"
+
+# WASM ↔ JS bridge.
+wasm-bindgen = "0.2"
+
+# Lets us return rich Rust structs to JS without manually wrapping every field
+# in JsValue. Pairs with serde derives on our public types.
+serde = { version = "1", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+
+# Routes Rust panics into a useful console.error in the browser. Tiny — only
+# enabled for debug builds.
+console_error_panic_hook = { version = "0.1", optional = true }
+
+[features]
+default = ["console_error_panic_hook"]
+
+[profile.release]
+# Trim down the .wasm. lto + opt-level=z gets us within ~30% of the smallest
+# possible binary without excessive build times.
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+
+# wasm-pack's bundled wasm-opt is older than the bulk-memory ops Rust 1.95
+# now emits by default. Pass the feature flags through so the optimizer
+# accepts the modern .wasm. (Simpler alternative: `wasm-opt = false` — but
+# we'd lose ~30% on binary size, which is a meaningful regression for a
+# library distributed as an npm package.)
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ['-O', '--enable-bulk-memory', '--enable-nontrapping-float-to-int', '--enable-sign-ext', '--enable-mutable-globals', '--enable-reference-types']

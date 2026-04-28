@@ -1,0 +1,48 @@
+# Publish to npm on `v*` tag pushes. Release flow:
+#
+#   1. bump `version` in Cargo.toml (and the `package.json` template that
+#      wasm-pack consumes from Cargo.toml metadata)
+#   2. commit, tag `vX.Y.Z`, push tag
+#   3. this workflow builds the wasm package and runs `npm publish` from
+#      the resulting pkg/ directory
+#
+# Requires the secret NPM_TOKEN with publish access to the @narenana
+# scope. Generate at https://www.npmjs.com/settings/<user>/tokens — pick
+# "Automation" type so it bypasses 2FA. Add to repo secrets.
+
+name: Release to npm
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust + wasm32 target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build (web target, release)
+        run: wasm-pack build --target web --release --scope narenana
+
+      - name: Setup Node + npm registry auth
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish to npm
+        run: npm publish --access public
+        working-directory: pkg
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

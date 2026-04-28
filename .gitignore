@@ -1,0 +1,22 @@
+# Rust build artifacts
+target/
+Cargo.lock
+
+# wasm-pack output (the npm-installable package). Locally we `npm link`
+# from this dir; in CI we publish to the registry. Either way it's not
+# meaningful to commit — it's a derived artifact.
+pkg/
+
+# Node bits that may sneak in if someone runs npm here directly
+node_modules/
+
+# IDE / editor noise
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Test logs (pilots' BBLs may contain sensitive GPS data — never commit)
+test-logs/
+*.bbl
+*.bfl

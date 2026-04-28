@@ -1,0 +1,52 @@
+# Build the WASM package on every push and PR. Catches breakage in the
+# wasm-bindgen wrapper before it lands on master. Doesn't publish anything
+# — that's `release.yml`'s job, gated on tag pushes.
+#
+# We use the MSVC-flavoured GitHub-hosted Linux runner (`ubuntu-latest`),
+# which has rustup + a working linker out of the box. Local Windows dev
+# uses the GNU toolchain to dodge link.exe; CI doesn't have to.
+
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust + wasm32 target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo registry + target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build (web target, release)
+        run: wasm-pack build --target web --release
+
+      - name: Sanity-check generated package
+        run: |
+          ls -la pkg/
+          test -f pkg/blackbox_parser.js
+          test -f pkg/blackbox_parser_bg.wasm
+          test -f pkg/package.json
+          # Ensure parseBlackbox is in the exports
+          grep -q "parseBlackbox" pkg/blackbox_parser.js
