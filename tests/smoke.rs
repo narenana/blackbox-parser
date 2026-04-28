@@ -43,11 +43,8 @@ fn smoke_parse_real_log() {
     println!("Board:      {:?}", headers.board_info());
 
     println!("Main fields ({}):", headers.main_frame_def().len());
-    for fd in headers.main_frame_def().iter().take(8) {
-        println!("  {:>20}  signed={}  unit={:?}", fd.name, fd.signed, fd.unit);
-    }
-    if headers.main_frame_def().len() > 8 {
-        println!("  ... and {} more", headers.main_frame_def().len() - 8);
+    for fd in headers.main_frame_def().iter() {
+        println!("  {:>22}  signed={}  unit={:?}", fd.name, fd.signed, fd.unit);
     }
 
     println!("Slow fields ({}):", headers.slow_frame_def().len());

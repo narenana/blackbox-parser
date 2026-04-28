@@ -27,13 +27,12 @@ crate-type = ["cdylib", "rlib"]
 # WASM facade around its public API.
 blackbox-log = "0.4"
 
-# WASM ↔ JS bridge.
+# WASM ↔ JS bridge. We expose data as typed arrays via js-sys so the JS side
+# can read flat Float64Array buffers directly out of WASM linear memory —
+# orders of magnitude faster than the per-element JsValue allocation that
+# serde-wasm-bindgen generates for nested Vec<Vec<f64>>.
 wasm-bindgen = "0.2"
-
-# Lets us return rich Rust structs to JS without manually wrapping every field
-# in JsValue. Pairs with serde derives on our public types.
-serde = { version = "1", features = ["derive"] }
-serde-wasm-bindgen = "0.6"
+js-sys = "0.3"
 
 # Routes Rust panics into a useful console.error in the browser. Tiny — only
 # enabled for debug builds.
